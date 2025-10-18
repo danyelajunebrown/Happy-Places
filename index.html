@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Places - Belonging Ecology System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            color: #10b981;
+            margin-bottom: 0.5rem;
+            font-weight: 800;
+        }
+        
+        .tagline {
+            font-style: italic;
+            font-size: 1.1rem;
+            color: #94a3b8;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 0.5rem;
+        }
+        
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: #1e293b;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .tab:hover {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        
+        .tab.active {
+            background: #10b981;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #10b981;
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 0.5rem;
+        }
+        
+        .items-list {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .item-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        
+        .item-card:hover {
+            transform: translateY(-2px);
+            border-color: #10b981;
+        }
+        
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+        
+        .item-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+        
+        .category-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .category-good_stuff {
+            background: #064e3b;
+            color: #6ee7b7;
+        }
+        
+        .category-refillable {
+            background: #713f12;
+            color: #fcd34d;
+        }
+        
+        .category-disposable {
+            background: #1e293b;
+            color: #94a3b8;
+        }
+        
+        .item-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .detail-item {
+            font-size: 0.9rem;
+        }
+        
+        .detail-label {
+            color: #94a3b8;
+            margin-bottom: 0.25rem;
+        }
+        
+        .detail-value {
+            color: #f1f5f9;
+            font-weight: 500;
+        }
+        
+        .alert {
+            background: #7c2d12;
+            border: 1px solid #ea580c;
+            color: #fed7aa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        
+        .zones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .zone-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        
+        .zone-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+        
+        .zone-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .zone-item {
+            background: #0f172a;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .pattern-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .pattern-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #10b981;
+            margin-bottom: 0.5rem;
+        }
+        
+        .pattern-desc {
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+        
+        .distribution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .distribution-stat {
+            background: #0f172a;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .distribution-count {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #10b981;
+        }
+        
+        .distribution-label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #94a3b8;
+        }
+        
+        .error {
+            background: #7f1d1d;
+            border: 1px solid #dc2626;
+            color: #fecaca;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Happy Places</h1>
+            <p class="tagline">
+                Empowers via autoethnography toward the end of austerity and planned obsolescence
+            </p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="dashboard">Dashboard</button>
+            <button class="tab" data-tab="items">Items</button>
+            <button class="tab" data-tab="patterns">Patterns</button>
+            <button class="tab" data-tab="zones">Zones</button>
+        </div>
+
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Items</h3>
+                    <div class="stat-value" id="total-items">0</div>
+                    <div class="stat-label">Across all zones</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Needs Attention</h3>
+                    <div class="stat-value" id="needs-attention">0</div>
+                    <div class="stat-label">Items requiring action</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Active Zones</h3>
+                    <div class="stat-value" id="active-zones">0</div>
+                    <div class="stat-label">Registered spaces</div>
+                </div>
+            </div>
+
+            <div id="attention-items"></div>
+        </div>
+
+        <div id="items" class="tab-content">
+            <div class="items-list" id="items-list"></div>
+        </div>
+
+        <div id="patterns" class="tab-content">
+            <div class="pattern-card">
+                <h3 class="pattern-title">Distribution Behaviors</h3>
+                <p class="pattern-desc">
+                    The system observes how items distribute across spaces without judgment. 
+                    Stacking, spreading, losing, and discarding are all valid strategies that serve different needs.
+                </p>
+            </div>
+            
+            <div class="distribution-grid" id="distribution-stats"></div>
+            
+            <div id="routine-insights"></div>
+        </div>
+
+        <div id="zones" class="tab-content">
+            <div class="zones-grid" id="zones-grid"></div>
+        </div>
+
+        <div class="loading" id="loading">Loading data...</div>
+        <div class="error" id="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // Load data
+        async function loadData() {
+            try {
+                const response = await fetch('happy_places_export.json');
+                if (!response.ok) throw new Error('Data file not found');
+                
+                const data = await response.json();
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                renderDashboard(data);
+                renderItems(data.items);
+                renderPatterns(data.patterns);
+                renderZones(data);
+                
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = `Error loading data: ${error.message}. Make sure you've run "python happy_places.py export" first.`;
+            }
+        }
+
+        function renderDashboard(data) {
+            document.getElementById('total-items').textContent = data.items.length;
+            
+            const attentionCount = 
+                (data.attention.refill_needed?.length || 0) + 
+                (data.attention.replacement_soon?.length || 0);
+            document.getElementById('needs-attention').textContent = attentionCount;
+            document.getElementById('active-zones').textContent = data.zones.length;
+
+            // Render attention items
+            const attentionDiv = document.getElementById('attention-items');
+            if (attentionCount > 0) {
+                let html = '<div class="alert"><strong>Items Needing Attention:</strong><ul style="margin-top: 0.5rem; margin-left: 1.5rem;">';
+                
+                data.attention.refill_needed?.forEach(item => {
+                    html += `<li>${item.label}: ${item.current_quantity} remaining (threshold: ${item.threshold})</li>`;
+                });
+                
+                data.attention.replacement_soon?.forEach(item => {
+                    html += `<li>${item.label}: ${item.health_percent}% life remaining</li>`;
+                });
+                
+                html += '</ul></div>';
+                attentionDiv.innerHTML = html;
+            }
+        }
+
+        function renderItems(items) {
+            const list = document.getElementById('items-list');
+            list.innerHTML = items.map(item => {
+                let lifecycleInfo = '';
+                if (item.lifecycle) {
+                    lifecycleInfo = `
+                        <div class="detail-item">
+                            <div class="detail-label">Lifecycle</div>
+                            <div class="detail-value">
+                                ${item.lifecycle.remaining_years} years remaining 
+                                (${item.lifecycle.health_percent}% health)
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (item.refill_status) {
+                    const needsRefill = item.refill_status.needs_refill ? 
+                        '<span style="color: #fbbf24;">⚠️ Needs refill</span>' : 
+                        `${item.refill_status.days_remaining} days remaining`;
+                    lifecycleInfo = `
+                        <div class="detail-item">
+                            <div class="detail-label">Refill Status</div>
+                            <div class="detail-value">${needsRefill}</div>
+                        </div>
+                    `;
+                }
+
+                const placement = item.current_placement || {};
+                
+                return `
+                    <div class="item-card">
+                        <div class="item-header">
+                            <h3 class="item-title">${item.label}</h3>
+                            <span class="category-badge category-${item.category}">
+                                ${item.category.replace('_', ' ')}
+                            </span>
+                        </div>
+                        <div class="item-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Zone</div>
+                                <div class="detail-value">${placement.zone || 'Unknown'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Distribution</div>
+                                <div class="detail-value">${placement.distribution_type || 'N/A'}</div>
+                            </div>
+                            ${placement.routine ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Routine</div>
+                                    <div class="detail-value">${placement.routine}</div>
+                                </div>
+                            ` : ''}
+                            ${placement.motive ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Motive</div>
+                                    <div class="detail-value">${placement.motive}</div>
+                                </div>
+                            ` : ''}
+                            ${lifecycleInfo}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPatterns(patterns) {
+            const statsDiv = document.getElementById('distribution-stats');
+            const counts = patterns.overall_counts || {};
+            
+            statsDiv.innerHTML = Object.entries(counts).map(([type, count]) => `
+                <div class="distribution-stat">
+                    <div class="distribution-count">${count}</div>
+                    <div class="distribution-label">${type}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderZones(data) {
+            const grid = document.getElementById('zones-grid');
+            
+            // Group items by zone
+            const itemsByZone = {};
+            data.items.forEach(item => {
+                const zone = item.current_placement?.zone || 'unassigned';
+                if (!itemsByZone[zone]) itemsByZone[zone] = [];
+                itemsByZone[zone].push(item);
+            });
+            
+            grid.innerHTML = Object.entries(itemsByZone).map(([zone, items]) => `
+                <div class="zone-card">
+                    <h3 class="zone-title">${zone.replace(/_/g, ' ')}</h3>
+                    <div class="zone-items">
+                        ${items.map(item => `
+                            <div class="zone-item">
+                                ${item.label} 
+                                <span style="color: #64748b;">(${item.current_placement?.distribution_type})</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>
