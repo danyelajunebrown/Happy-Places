@@ -39,6 +39,8 @@ Usage:
 import sqlite3
 import datetime
 import json
+import shutil
+import os
 from typing import Optional, List, Dict, Any
 from dateutil.relativedelta import relativedelta
 
@@ -441,12 +443,55 @@ class HappyPlaces:
                 FROM items
                 ORDER BY label
             """).fetchall()
-            
+
             return [{
                 "item_id": r[0],
                 "label": r[1],
                 "category": r[2]
             } for r in rows]
+
+    # ===== ITEM UPDATES =====
+
+    def update_item(self, item_id: str, **kwargs) -> bool:
+        """Update item fields. Returns True if successful."""
+        allowed_fields = {
+            'label', 'category', 'purchase_date', 'expected_lifespan_years',
+            'current_quantity', 'refill_threshold', 'usage_rate_per_day', 'metadata'
+        }
+
+        updates = {k: v for k, v in kwargs.items() if k in allowed_fields}
+        if not updates:
+            return False
+
+        # Convert metadata dict to JSON string if present
+        if 'metadata' in updates and isinstance(updates['metadata'], dict):
+            updates['metadata'] = json.dumps(updates['metadata'])
+
+        set_clause = ', '.join([f"{k} = ?" for k in updates.keys()])
+        values = list(updates.values()) + [item_id]
+
+        with self._connect() as conn:
+            cursor = conn.execute(
+                f"UPDATE items SET {set_clause} WHERE item_id = ?",
+                values
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def update_quantity(self, item_id: str, new_quantity: int) -> bool:
+        """Update quantity for refillable/disposable items"""
+        return self.update_item(item_id, current_quantity=new_quantity)
+
+    def delete_item(self, item_id: str) -> bool:
+        """Delete an item and all its placements"""
+        with self._connect() as conn:
+            # Delete related records first (foreign key constraints)
+            conn.execute("DELETE FROM placements WHERE item_id = ?", (item_id,))
+            conn.execute("DELETE FROM co_presence WHERE item_a = ? OR item_b = ?",
+                        (item_id, item_id))
+            cursor = conn.execute("DELETE FROM items WHERE item_id = ?", (item_id,))
+            conn.commit()
+            return cursor.rowcount > 0
 
     # ===== DATA EXPORT =====
     
@@ -457,39 +502,238 @@ class HappyPlaces:
             "items": [],
             "zones": self.list_zones(),
             "patterns": self.distribution_patterns(),
+            "routines": self.routine_insights(),
             "attention": self.items_needing_attention()
         }
-        
+
         # Export each item with full status
         for item in self.all_items():
             status = self.item_status(item["item_id"])
             if status:
                 data["items"].append(status)
-        
+
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=2)
-        
+
         print(f"✓ Exported to {filepath}")
+
+    def import_from_json(self, filepath: str = "happy_places_export.json") -> None:
+        """Import data from JSON file"""
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Import file not found: {filepath}")
+
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+
+        # Import zones first
+        for zone in data.get("zones", []):
+            self.register_zone(zone["zone_id"], zone["zone_name"],
+                             zone.get("description", ""))
+
+        # Import items
+        for item in data.get("items", []):
+            # Extract core item data
+            item_data = {
+                "item_id": item["item_id"],
+                "label": item["label"],
+                "category": item["category"],
+                "metadata": item.get("metadata", {})
+            }
+
+            # Add lifecycle data if present
+            if "lifecycle" in item:
+                item_data["purchase_date"] = item["lifecycle"].get("purchase_date")
+                item_data["expected_lifespan_years"] = item["lifecycle"].get("expected_lifespan_years")
+
+            # Add refill data if present
+            if "refill_status" in item:
+                item_data["current_quantity"] = item["refill_status"].get("current_quantity")
+                item_data["refill_threshold"] = item["refill_status"].get("refill_threshold")
+                # Calculate usage rate from days_remaining if available
+                days = item["refill_status"].get("days_remaining")
+                qty = item["refill_status"].get("current_quantity", 0)
+                if days and days > 0:
+                    item_data["usage_rate_per_day"] = qty / days
+
+            self.register_item(**item_data)
+
+            # Import current placement if present
+            if "current_placement" in item:
+                placement = item["current_placement"]
+                self.record_placement(
+                    item["item_id"],
+                    zone=placement.get("zone", "unknown"),
+                    distribution_type=placement.get("distribution_type", "placed"),
+                    routine=placement.get("routine"),
+                    motive=placement.get("motive"),
+                    timestamp=placement.get("timestamp")
+                )
+
+        print(f"✓ Imported data from {filepath}")
+
+    # ===== BACKUP & RESTORE =====
+
+    def backup_database(self, backup_dir: str = "backups") -> str:
+        """Create a timestamped backup of the database"""
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = os.path.join(backup_dir, f"happy_places_{timestamp}.db")
+
+        shutil.copy2(self.db_path, backup_path)
+        print(f"✓ Database backed up to {backup_path}")
+        return backup_path
+
+    def restore_database(self, backup_path: str) -> None:
+        """Restore database from a backup file"""
+        if not os.path.exists(backup_path):
+            raise FileNotFoundError(f"Backup file not found: {backup_path}")
+
+        # Create a backup of current database before restoring
+        current_backup = self.backup_database(backup_dir="backups/pre_restore")
+
+        shutil.copy2(backup_path, self.db_path)
+        print(f"✓ Database restored from {backup_path}")
+        print(f"  Previous database backed up to {current_backup}")
+
+    def list_backups(self, backup_dir: str = "backups") -> List[Dict]:
+        """List available database backups"""
+        if not os.path.exists(backup_dir):
+            return []
+
+        backups = []
+        for filename in os.listdir(backup_dir):
+            if filename.endswith(".db"):
+                filepath = os.path.join(backup_dir, filename)
+                stat = os.stat(filepath)
+                backups.append({
+                    "filename": filename,
+                    "filepath": filepath,
+                    "size_bytes": stat.st_size,
+                    "created_at": datetime.datetime.fromtimestamp(stat.st_mtime).isoformat()
+                })
+
+        return sorted(backups, key=lambda x: x["created_at"], reverse=True)
+
+
+# ===== NFC INTEGRATION =====
+
+class NFCReader:
+    """
+    NFC tag reading functionality for item identification.
+    Requires nfcpy library and compatible NFC reader hardware.
+    """
+
+    @staticmethod
+    def is_available() -> bool:
+        """Check if NFC hardware is available"""
+        try:
+            import nfc
+            clf = nfc.ContactlessFrontend()
+            available = clf is not None
+            if clf:
+                clf.close()
+            return available
+        except (ImportError, Exception):
+            return False
+
+    @staticmethod
+    def read_tag(timeout: int = 10) -> Optional[str]:
+        """
+        Read an NFC tag and return its UID as a string.
+
+        Args:
+            timeout: Seconds to wait for a tag (default 10)
+
+        Returns:
+            Tag UID as hex string, or None if timeout/error
+        """
+        try:
+            import nfc
+
+            def on_connect(tag):
+                """Callback when tag is detected"""
+                return tag.identifier.hex()
+
+            clf = nfc.ContactlessFrontend()
+            if not clf:
+                print("⚠️  No NFC reader found")
+                return None
+
+            print(f"Waiting for NFC tag (timeout: {timeout}s)...")
+            tag_id = clf.connect(rdwr={'on-connect': on_connect}, terminate=lambda: False)
+            clf.close()
+
+            if tag_id:
+                print(f"✓ Tag detected: {tag_id}")
+                return tag_id
+            else:
+                print("⚠️  No tag detected within timeout")
+                return None
+
+        except ImportError:
+            print("⚠️  nfcpy library not installed. Run: pip install nfcpy")
+            return None
+        except Exception as e:
+            print(f"⚠️  NFC read error: {e}")
+            return None
+
+    @staticmethod
+    def scan_and_register(hp: 'HappyPlaces', label: str, category: str, **kwargs) -> Optional[str]:
+        """
+        Scan an NFC tag and register it as an item.
+
+        Args:
+            hp: HappyPlaces instance
+            label: Item label
+            category: Item category
+            **kwargs: Additional item parameters
+
+        Returns:
+            Item ID (tag UID) if successful, None otherwise
+        """
+        tag_id = NFCReader.read_tag()
+        if tag_id:
+            hp.register_item(tag_id, label, category, **kwargs)
+            print(f"✓ Item '{label}' registered with NFC tag {tag_id}")
+            return tag_id
+        return None
 
 
 # ===== CLI INTERFACE =====
 
 if __name__ == "__main__":
     import sys
-    
+
     hp = HappyPlaces("happy_places.db")
-    
+
     if len(sys.argv) < 2:
         print("Happy Places - Item Tracking System")
         print("\nUsage:")
-        print("  python happy_places.py demo          - Run demo with sample data")
-        print("  python happy_places.py export        - Export data to JSON")
-        print("  python happy_places.py status <id>   - Get item status")
-        print("  python happy_places.py list          - List all items")
-        print("  python happy_places.py attention     - Show items needing attention")
-        print("  python happy_places.py patterns      - Show distribution patterns")
+        print("  python happy_places.py demo             - Run demo with sample data")
+        print("  python happy_places.py export           - Export data to JSON")
+        print("  python happy_places.py import [file]    - Import data from JSON")
+        print("  python happy_places.py status <id>      - Get item status")
+        print("  python happy_places.py list             - List all items")
+        print("  python happy_places.py attention        - Show items needing attention")
+        print("  python happy_places.py patterns         - Show distribution patterns")
+        print("  python happy_places.py routines         - Show routine insights")
+        print("\nItem Management:")
+        print("  python happy_places.py add              - Add item interactively")
+        print("  python happy_places.py add-nfc          - Add item via NFC scan")
+        print("  python happy_places.py update <id>      - Update item quantity")
+        print("  python happy_places.py delete <id>      - Delete an item")
+        print("  python happy_places.py place <id>       - Record item placement")
+        print("\nZone Management:")
+        print("  python happy_places.py zones            - List all zones")
+        print("  python happy_places.py add-zone         - Add zone interactively")
+        print("\nBackup & Restore:")
+        print("  python happy_places.py backup           - Create database backup")
+        print("  python happy_places.py restore <file>   - Restore from backup")
+        print("  python happy_places.py list-backups     - List available backups")
         sys.exit(0)
-    
+
     command = sys.argv[1]
     
     if command == "demo":
@@ -631,11 +875,189 @@ if __name__ == "__main__":
         print("Overall:")
         for dist_type, count in patterns["overall_counts"].items():
             print(f"  {dist_type}: {count}")
-        
+
         print("\nBy Zone:")
         for entry in patterns["by_zone"]:
             print(f"  {entry['zone']} - {entry['distribution_type']}: {entry['count']}")
-    
+
+    elif command == "routines":
+        routines = hp.routine_insights()
+        print("\n=== Routine Insights ===\n")
+        if routines:
+            for routine in routines:
+                print(f"  {routine['routine']} ({routine['motive'] or 'no motive'})")
+                print(f"    Frequency: {routine['frequency']} times")
+                print(f"    Zones: {', '.join(routine['zones'])}")
+                print()
+        else:
+            print("No routine patterns recorded yet.")
+
+    elif command == "import":
+        filepath = sys.argv[2] if len(sys.argv) > 2 else "happy_places_export.json"
+        try:
+            hp.import_from_json(filepath)
+        except Exception as e:
+            print(f"Import failed: {e}")
+
+    elif command == "add":
+        print("\n=== Add New Item ===\n")
+        item_id = input("Item ID (or press Enter to generate): ").strip()
+        if not item_id:
+            import uuid
+            item_id = str(uuid.uuid4())[:8]
+            print(f"Generated ID: {item_id}")
+
+        label = input("Label: ").strip()
+        if not label:
+            print("Label is required!")
+            sys.exit(1)
+
+        print("\nCategory:")
+        print("  1. good_stuff (durable goods)")
+        print("  2. refillable (consumables)")
+        print("  3. disposable")
+        category_choice = input("Choice (1-3): ").strip()
+        category_map = {"1": "good_stuff", "2": "refillable", "3": "disposable"}
+        category = category_map.get(category_choice, "good_stuff")
+
+        item_data = {"item_id": item_id, "label": label, "category": category}
+
+        if category == "good_stuff":
+            purchase_date = input("Purchase date (YYYY-MM-DD, optional): ").strip()
+            lifespan = input("Expected lifespan in years (optional): ").strip()
+            if purchase_date:
+                item_data["purchase_date"] = purchase_date
+            if lifespan:
+                item_data["expected_lifespan_years"] = float(lifespan)
+
+        elif category == "refillable":
+            quantity = input("Current quantity: ").strip()
+            threshold = input("Refill threshold: ").strip()
+            usage = input("Usage rate per day: ").strip()
+            if quantity:
+                item_data["current_quantity"] = int(quantity)
+            if threshold:
+                item_data["refill_threshold"] = int(threshold)
+            if usage:
+                item_data["usage_rate_per_day"] = float(usage)
+
+        hp.register_item(**item_data)
+        print(f"\n✓ Item '{label}' added with ID: {item_id}")
+
+    elif command == "add-nfc":
+        if not NFCReader.is_available():
+            print("⚠️  NFC hardware not available")
+            print("Make sure you have:")
+            print("  1. nfcpy installed: pip install nfcpy")
+            print("  2. NFC reader hardware connected")
+            sys.exit(1)
+
+        print("\n=== Add Item via NFC ===\n")
+        label = input("Label: ").strip()
+        if not label:
+            print("Label is required!")
+            sys.exit(1)
+
+        print("\nCategory:")
+        print("  1. good_stuff (durable goods)")
+        print("  2. refillable (consumables)")
+        print("  3. disposable")
+        category_choice = input("Choice (1-3): ").strip()
+        category_map = {"1": "good_stuff", "2": "refillable", "3": "disposable"}
+        category = category_map.get(category_choice, "good_stuff")
+
+        print("\nPlace NFC tag near reader...")
+        tag_id = NFCReader.scan_and_register(hp, label, category)
+        if not tag_id:
+            print("Failed to register item")
+            sys.exit(1)
+
+    elif command == "update" and len(sys.argv) > 2:
+        item_id = sys.argv[2]
+        quantity = input(f"New quantity for '{item_id}': ").strip()
+        if quantity:
+            if hp.update_quantity(item_id, int(quantity)):
+                print(f"✓ Updated quantity for {item_id}")
+            else:
+                print(f"Item '{item_id}' not found")
+
+    elif command == "delete" and len(sys.argv) > 2:
+        item_id = sys.argv[2]
+        confirm = input(f"Delete '{item_id}' and all its placements? (yes/no): ").strip().lower()
+        if confirm == "yes":
+            if hp.delete_item(item_id):
+                print(f"✓ Deleted item '{item_id}'")
+            else:
+                print(f"Item '{item_id}' not found")
+
+    elif command == "place" and len(sys.argv) > 2:
+        item_id = sys.argv[2]
+        print(f"\n=== Record Placement for '{item_id}' ===\n")
+
+        zone = input("Zone: ").strip()
+        if not zone:
+            print("Zone is required!")
+            sys.exit(1)
+
+        print("\nDistribution type:")
+        print("  1. placed")
+        print("  2. stack")
+        print("  3. spread")
+        print("  4. lose")
+        print("  5. discard")
+        dist_choice = input("Choice (1-5): ").strip()
+        dist_map = {"1": "placed", "2": "stack", "3": "spread", "4": "lose", "5": "discard"}
+        distribution_type = dist_map.get(dist_choice, "placed")
+
+        routine = input("Routine (optional): ").strip() or None
+        motive = input("Motive (optional): ").strip() or None
+
+        hp.record_placement(item_id, zone, distribution_type, routine, motive)
+        print(f"\n✓ Placement recorded for '{item_id}'")
+
+    elif command == "zones":
+        zones = hp.list_zones()
+        print(f"\n=== Zones ({len(zones)}) ===\n")
+        for zone in zones:
+            print(f"  • {zone['zone_name']} ({zone['zone_id']})")
+            if zone['description']:
+                print(f"    {zone['description']}")
+
+    elif command == "add-zone":
+        print("\n=== Add New Zone ===\n")
+        zone_id = input("Zone ID: ").strip()
+        zone_name = input("Zone Name: ").strip()
+        description = input("Description (optional): ").strip()
+
+        if zone_id and zone_name:
+            hp.register_zone(zone_id, zone_name, description)
+            print(f"\n✓ Zone '{zone_name}' registered")
+        else:
+            print("Zone ID and name are required!")
+
+    elif command == "backup":
+        hp.backup_database()
+
+    elif command == "restore" and len(sys.argv) > 2:
+        backup_path = sys.argv[2]
+        confirm = input(f"Restore from '{backup_path}'? Current data will be backed up. (yes/no): ").strip().lower()
+        if confirm == "yes":
+            try:
+                hp.restore_database(backup_path)
+            except Exception as e:
+                print(f"Restore failed: {e}")
+
+    elif command == "list-backups":
+        backups = hp.list_backups()
+        print(f"\n=== Available Backups ({len(backups)}) ===\n")
+        for backup in backups:
+            size_mb = backup['size_bytes'] / 1024 / 1024
+            print(f"  • {backup['filename']}")
+            print(f"    Created: {backup['created_at']}")
+            print(f"    Size: {size_mb:.2f} MB")
+            print(f"    Path: {backup['filepath']}")
+            print()
+
     else:
         print(f"Unknown command: {command}")
         print("Run without arguments to see usage.")

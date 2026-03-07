@@ -308,6 +308,7 @@
             <button class="tab" data-tab="items">Items</button>
             <button class="tab" data-tab="patterns">Patterns</button>
             <button class="tab" data-tab="zones">Zones</button>
+            <button class="tab" data-tab="routines">Routines</button>
         </div>
 
         <div id="dashboard" class="tab-content active">
@@ -333,6 +334,23 @@
         </div>
 
         <div id="items" class="tab-content">
+            <div style="margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                <input type="text" id="search-items" placeholder="Search items..." style="flex: 1; min-width: 200px; padding: 0.75rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 1rem;">
+                <select id="filter-category" style="padding: 0.75rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 1rem;">
+                    <option value="">All Categories</option>
+                    <option value="good_stuff">Good Stuff</option>
+                    <option value="refillable">Refillable</option>
+                    <option value="disposable">Disposable</option>
+                </select>
+                <select id="sort-items" style="padding: 0.75rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 1rem;">
+                    <option value="label">Sort by Name</option>
+                    <option value="category">Sort by Category</option>
+                    <option value="zone">Sort by Zone</option>
+                </select>
+                <button id="scan-nfc-btn" style="padding: 0.75rem 1.5rem; background: #10b981; border: none; border-radius: 8px; color: white; font-size: 1rem; cursor: pointer; font-weight: 600;">
+                    📱 Scan NFC Tag
+                </button>
+            </div>
             <div class="items-list" id="items-list"></div>
         </div>
 
@@ -354,39 +372,136 @@
             <div class="zones-grid" id="zones-grid"></div>
         </div>
 
+        <div id="routines" class="tab-content">
+            <div class="pattern-card">
+                <h3 class="pattern-title">Routine Patterns</h3>
+                <p class="pattern-desc">
+                    Track how items move through your daily routines and understand the motives behind placement decisions.
+                </p>
+            </div>
+            <div id="routines-list"></div>
+        </div>
+
         <div class="loading" id="loading">Loading data...</div>
         <div class="error" id="error" style="display: none;"></div>
     </div>
 
     <script>
+        // Global data storage
+        let allItems = [];
+        let currentData = {};
+
         // Tab switching
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 const tabName = tab.dataset.tab;
-                
+
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                
+
                 tab.classList.add('active');
                 document.getElementById(tabName).classList.add('active');
             });
         });
+
+        // Search, filter, and sort functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('search-items');
+            const filterCategory = document.getElementById('filter-category');
+            const sortSelect = document.getElementById('sort-items');
+            const nfcBtn = document.getElementById('scan-nfc-btn');
+
+            if (searchInput && filterCategory && sortSelect) {
+                searchInput.addEventListener('input', applyFilters);
+                filterCategory.addEventListener('change', applyFilters);
+                sortSelect.addEventListener('change', applyFilters);
+            }
+
+            if (nfcBtn) {
+                nfcBtn.addEventListener('click', scanNFC);
+            }
+        });
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('search-items').value.toLowerCase();
+            const categoryFilter = document.getElementById('filter-category').value;
+            const sortBy = document.getElementById('sort-items').value;
+
+            let filtered = allItems.filter(item => {
+                const matchesSearch = item.label.toLowerCase().includes(searchTerm) ||
+                                    item.item_id.toLowerCase().includes(searchTerm);
+                const matchesCategory = !categoryFilter || item.category === categoryFilter;
+                return matchesSearch && matchesCategory;
+            });
+
+            // Sort
+            filtered.sort((a, b) => {
+                if (sortBy === 'label') {
+                    return a.label.localeCompare(b.label);
+                } else if (sortBy === 'category') {
+                    return a.category.localeCompare(b.category);
+                } else if (sortBy === 'zone') {
+                    const zoneA = a.current_placement?.zone || 'zzz';
+                    const zoneB = b.current_placement?.zone || 'zzz';
+                    return zoneA.localeCompare(zoneB);
+                }
+                return 0;
+            });
+
+            renderItems(filtered);
+        }
+
+        // Web NFC API support
+        async function scanNFC() {
+            if (!('NDEFReader' in window)) {
+                alert('Web NFC is not supported on this device/browser. Try Chrome on Android or use the Python CLI with NFC hardware.');
+                return;
+            }
+
+            try {
+                const ndef = new NDEFReader();
+                await ndef.scan();
+
+                alert('NFC scan started. Hold a tag near your device...');
+
+                ndef.addEventListener('reading', ({ serialNumber }) => {
+                    const tagId = serialNumber.replace(/:/g, '');
+                    console.log('NFC tag detected:', tagId);
+
+                    // Find item with this tag
+                    const item = allItems.find(i => i.item_id === tagId);
+                    if (item) {
+                        alert(`Found item: ${item.label}\nID: ${item.item_id}`);
+                        // Optionally, show item details
+                    } else {
+                        const register = confirm(`Tag ${tagId} not registered.\n\nTo register this tag, use:\npython happy_places.py add-nfc`);
+                    }
+                });
+
+            } catch (error) {
+                console.error('NFC scan error:', error);
+                alert(`NFC scan failed: ${error.message}`);
+            }
+        }
 
         // Load data
         async function loadData() {
             try {
                 const response = await fetch('happy_places_export.json');
                 if (!response.ok) throw new Error('Data file not found');
-                
+
                 const data = await response.json();
-                
+                currentData = data;
+                allItems = data.items;
+
                 document.getElementById('loading').style.display = 'none';
-                
+
                 renderDashboard(data);
                 renderItems(data.items);
                 renderPatterns(data.patterns);
                 renderZones(data);
-                
+                renderRoutines(data.routines || []);
+
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
                 const errorDiv = document.getElementById('error');
@@ -502,7 +617,7 @@
 
         function renderZones(data) {
             const grid = document.getElementById('zones-grid');
-            
+
             // Group items by zone
             const itemsByZone = {};
             data.items.forEach(item => {
@@ -510,17 +625,51 @@
                 if (!itemsByZone[zone]) itemsByZone[zone] = [];
                 itemsByZone[zone].push(item);
             });
-            
+
             grid.innerHTML = Object.entries(itemsByZone).map(([zone, items]) => `
                 <div class="zone-card">
                     <h3 class="zone-title">${zone.replace(/_/g, ' ')}</h3>
                     <div class="zone-items">
                         ${items.map(item => `
                             <div class="zone-item">
-                                ${item.label} 
+                                ${item.label}
                                 <span style="color: #64748b;">(${item.current_placement?.distribution_type})</span>
                             </div>
                         `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderRoutines(routines) {
+            const list = document.getElementById('routines-list');
+
+            if (!routines || routines.length === 0) {
+                list.innerHTML = '<div class="pattern-card"><p class="pattern-desc">No routine patterns recorded yet. Start tracking item placements with routines to see patterns emerge.</p></div>';
+                return;
+            }
+
+            list.innerHTML = routines.map(routine => `
+                <div class="pattern-card">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <h3 class="pattern-title">${routine.routine || 'Unnamed Routine'}</h3>
+                            ${routine.motive ? `<p class="pattern-desc">Motive: ${routine.motive}</p>` : ''}
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 2rem; font-weight: bold; color: #10b981;">${routine.frequency}</div>
+                            <div style="font-size: 0.85rem; color: #94a3b8;">occurrences</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">Active Zones:</div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            ${routine.zones.map(zone => `
+                                <span style="background: #0f172a; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; color: #e2e8f0;">
+                                    ${zone.replace(/_/g, ' ')}
+                                </span>
+                            `).join('')}
+                        </div>
                     </div>
                 </div>
             `).join('');
