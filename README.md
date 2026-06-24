@@ -1,126 +1,74 @@
-# Happy Places
+# Happy Places — Belong OS
 
-> An autoethnographic, NFC-powered platform subverting austerity and planned obsolescence with homefulness
+> A neural network that learns *belongingness*: given where a thing is, infer
+> where it **belongs**. Built from scratch, one chapter of *Neural Networks from
+> Scratch in Python* (NNFS) at a time, trained on our own data instead of the
+> book's toy datasets.
 
-Track your belongings, understand their lifecycles, and observe how items move through your daily routines. Happy Places helps you build a mindful relationship with your possessions through spatial awareness and behavioral pattern recognition.
+This is a clean reboot. Earlier Happy Places was a SQLite + CLI + web item
+tracker with no machine learning — that code lives in this repo's git history.
+Everything here now is the neural net.
 
-## Features
+## The idea
 
-✅ **Item Lifecycle Tracking** - Monitor age, health, and expected lifespan of durable goods
-✅ **Refill Management** - Track consumables with smart refill alerts
-✅ **NFC Integration** - Scan physical tags via USB readers or mobile Web NFC
-✅ **Spatial Tracking** - Record where items are and how they're distributed
-✅ **Routine Analysis** - Understand patterns in how items move through daily life
-✅ **Distribution Patterns** - Stack, spread, lose, discard, or intentionally place
-✅ **Web Dashboard** - Beautiful, responsive visualization with search and filters
-✅ **Complete CLI** - Full terminal interface for all operations
-✅ **Backup/Restore** - Timestamped database backups and safe restoration
-✅ **Import/Export** - JSON-based data portability
+Sensors won't say "this is in the bedroom." They give signal strength. So:
 
-## Quick Start
+- **Track E — relative positioning:** turn beacon signal (RSSI → rough distance)
+  into `(rel_x, rel_y)`, a position relative to the room. *(network input)*
+- **Track C — inference:** turn relative position into a **place** label.
+  *(what the network will learn to output)*
+
+We're learning the NNFS book directly on this problem shape, swapping its
+`spiral_data` for placeholder data shaped exactly like our real sensor readings
+will be — so the same code runs unchanged once the hardware (a beacon + room
+listeners) is mounted.
+
+## Where it is right now
+
+**NNFS Chapter 3 — "Adding Layers."** A reusable `Layer_Dense` class and a
+forward pass through two stacked layers, on placeholder room data.
+
+⚠️ **The numbers are meaningless so far** — they come from *random weights*. There
+are no activation functions (Ch 4), no loss (Ch 5), and no learning/backprop
+(Ch 9) yet. That's the correct state for this point in the book.
+
+## Run it
 
 ```bash
-# Install dependencies
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
-# Generate demo data
-python3 Happy-Places.py demo
-
-# Export for web visualization
-python3 Happy-Places.py export
-
-# Open index.html in browser
-open index.html
+python belong_os/ch03_adding_layers.py
 ```
 
-## Documentation
+It prints the data and layer shapes plus the first few (random-weight)
+room-scores, and writes `rooms_data.png` — the 4 placeholder rooms in
+relative-position space.
 
-- **[Quick Start Guide](QUICKSTART.md)** - Get up and running in 5 minutes
-- **[Architecture Documentation](ARCHITECTURE.md)** - Complete system design and technical details
+## Layout
 
-## Item Categories
-
-- **Good Stuff** (Durable Goods) - Tracks lifecycle from purchase to replacement
-- **Refillable** (Consumables) - Monitors quantities with usage rate calculations
-- **Disposable** - Basic tracking for temporary items
-
-## Distribution Types
-
-Track how items spread across your spaces:
-- **Placed** - Intentional positioning
-- **Stack** - Organized grouping
-- **Spread** - Natural dispersal
-- **Lose** - Misplacement patterns
-- **Discard** - Removal tracking
-
-## Philosophy
-
-Happy Places opposes:
-- **Austerity** - Valuing what you already have rather than constant acquisition
-- **Planned Obsolescence** - Understanding true lifecycles vs. manufactured expiration
-- **Spatial Alienation** - Knowing where things are creates belonging
-
-By tracking items through routines and motives, you develop autoethnographic insight into your relationship with material possessions.
-
-## Technology
-
-- **Python 3** backend with SQLite database
-- **Pure HTML/CSS/JavaScript** frontend (no frameworks)
-- **NFC support** via nfcpy (Python) and Web NFC API (browser)
-- **GitHub Pages** ready for static deployment
-- **Offline-first** - no server required
-
-## CLI Commands
-
-```bash
-# Item management
-python3 Happy-Places.py add              # Add item interactively
-python3 Happy-Places.py add-nfc          # Register via NFC scan
-python3 Happy-Places.py update <id>      # Update quantities
-python3 Happy-Places.py delete <id>      # Remove items
-python3 Happy-Places.py place <id>       # Record placement
-
-# Queries
-python3 Happy-Places.py list             # All items
-python3 Happy-Places.py status <id>      # Item details
-python3 Happy-Places.py attention        # Items needing action
-python3 Happy-Places.py patterns         # Distribution analysis
-python3 Happy-Places.py routines         # Behavioral patterns
-
-# Data management
-python3 Happy-Places.py export           # Export to JSON
-python3 Happy-Places.py import [file]    # Import from JSON
-python3 Happy-Places.py backup           # Create backup
-python3 Happy-Places.py restore <file>   # Restore database
+```
+belong_os/ch03_adding_layers.py   current chapter: forward pass through layers
+memory-bank/                      persistent project context (Cline-style)
+requirements.txt                  numpy, matplotlib
 ```
 
-## Web Dashboard
+## Roadmap
 
-Interactive visualization with:
-- Real-time search and filtering
-- Category-based filters
-- Multiple sort options
-- Routine insights visualization
-- Zone-based organization views
-- NFC scanning (Chrome on Android)
+| NNFS chapter | Adds | State |
+|---|---|---|
+| 3 Adding layers | dense layers + forward pass | ✅ done |
+| 4 Activations | ReLU + Softmax | next |
+| 5 Loss | categorical cross-entropy | planned |
+| 9–10 Backprop + optimizer | actual learning | planned |
+| — | real beacon/room-listener data | planned |
 
-## NFC Usage
+See [`memory-bank/`](memory-bank/) for the full context: project brief, product
+rationale, architecture/system patterns, tech stack, active focus, and progress.
 
-**Python (USB Readers):**
-```bash
-pip install nfcpy
-python3 Happy-Places.py add-nfc
-```
+## Why from scratch
 
-**Web (Mobile):**
-- Open dashboard in Chrome on Android
-- Click "📱 Scan NFC Tag" button
-- Hold phone near tag
-
-## License
-
-Open source - use freely for personal item tracking and research.
-
-## Contributing
-
-This project embodies appropriate technology and intentional simplicity. Contributions should maintain these principles.
+No TensorFlow, no PyTorch, not even the `nnfs` helper package — so every number
+is hand-built and understood. We replicate `nnfs.init()` with a fixed seed and
+`spiral_data` with our own `rooms_data()`.

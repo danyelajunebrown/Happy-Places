@@ -1,0 +1,36 @@
+# .clinerules — Belong OS
+
+Project-specific rules for any AI assistant working in this repo. Read the
+`memory-bank/` first (start with `activeContext.md`), then follow these.
+
+## Memory bank protocol
+- At the START of a session, read every file in `memory-bank/`. Don't ask the
+  user to re-explain the project — it's documented there.
+- At the END of a session with meaningful changes, update `activeContext.md`
+  (current focus) and `progress.md` (what got done / what's next).
+
+## How we build
+- Follow *Neural Networks from Scratch in Python* (NNFS) chapter by chapter.
+  Don't jump ahead to a later chapter's technique before the book introduces it.
+- NO machine-learning frameworks (TensorFlow, PyTorch, scikit-learn) and NOT the
+  `nnfs` helper package. Hand-build the network on numpy. Replicate `nnfs.init()`
+  with `np.random.seed(0)` and `spiral_data` with our own data generators.
+- Keep book-derived classes (e.g. `Layer_Dense`) faithful to the book so they
+  can be checked against the reference. Don't "improve" them ahead of the book.
+
+## Data contract
+- Placeholder data MUST stay the same shape as real sensor readings (`N × 2`
+  features in, `N` labels out) so swapping in real hardware data changes the
+  data source and nothing else.
+
+## Honesty
+- When a result is not yet meaningful (random weights, no activation, no
+  training), say so — in code comments AND in what the script prints. Don't let
+  "it runs" be mistaken for "it works."
+
+## Style
+- This is a learning codebase: comments should be verbose and explain *why* in
+  plain language. Print `.shape` at each stage so the data contract is visible.
+- Deterministic runs: fixed random seed everywhere.
+- One runnable script per chapter (`ch03_…`, then `ch04_…`); keep earlier
+  chapters runnable as checkpoints rather than mutating them in place.

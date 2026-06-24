@@ -1,48 +1,20 @@
-# Database files
-*.db
-*.db-journal
-*.db-wal
-*.db-shm
-
-# Python cache
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
+.venv/
 venv/
-ENV/
 env/
-.venv
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Generated artifacts
+rooms_data.png
+*.npy
+*.npz
+
+# OS / editor
 .DS_Store
+.idea/
+.vscode/
 
-# Logs
-*.log
-
-# Backups
-backups/
-*.backup
+# Claude local settings
+.claude/settings.local.json
