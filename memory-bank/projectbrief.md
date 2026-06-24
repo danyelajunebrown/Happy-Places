@@ -1,4 +1,4 @@
-# Project Brief: Happy Places / Belong OS
+# Project Brief: Happy Places
 
 > The neural-network reboot of Happy Places. Built from scratch following
 > *Neural Networks from Scratch in Python* (NNFS), trained on our own
@@ -6,7 +6,7 @@
 
 ## What this is
 
-**Belong OS** is a from-scratch neural network that learns *belongingness*:
+**Happy Places** is a from-scratch neural network that learns *belongingness*:
 given sensor readings about where an object (or person) is, infer which
 **place** it belongs to. We are building it up one NNFS chapter at a time,
 swapping the book's toy `spiral_data` for placeholder data shaped exactly like

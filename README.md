@@ -1,4 +1,4 @@
-# Happy Places — Belong OS
+# Happy Places
 
 > A neural network that learns *belongingness*: given where a thing is, infer
 > where it **belongs**. Built from scratch, one chapter of *Neural Networks from
@@ -39,7 +39,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-python belong_os/ch03_adding_layers.py
+python happy_places/ch03_adding_layers.py
 ```
 
 It prints the data and layer shapes plus the first few (random-weight)
@@ -49,7 +49,7 @@ relative-position space.
 ## Layout
 
 ```
-belong_os/ch03_adding_layers.py   current chapter: forward pass through layers
+happy_places/ch03_adding_layers.py   current chapter: forward pass through layers
 memory-bank/                      persistent project context (Cline-style)
 requirements.txt                  numpy, matplotlib
 ```

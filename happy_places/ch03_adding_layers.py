@@ -1,5 +1,5 @@
 """
-Belong OS — NNFS Chapter 3 ("Adding Layers") on our own data.
+Happy Places — NNFS Chapter 3 ("Adding Layers") on our own data.
 Track E (relative positioning), feeding Track C (inference) later.
 
 What Chapter 3 actually does: it turns the manual neuron math from Ch 2 into a
@@ -108,7 +108,7 @@ print(dense2.output[:5])
 # ----------------------------------------------------------------------------
 plt.figure(figsize=(6, 6))
 plt.scatter(X[:, 0], X[:, 1], c=y, cmap="viridis", s=25, alpha=0.8)
-plt.title("Belong OS placeholder data: 4 rooms in relative-position space")
+plt.title("Happy Places placeholder data: 4 rooms in relative-position space")
 plt.xlabel("rel_x (from beacon signal, eventually)")
 plt.ylabel("rel_y (from beacon signal, eventually)")
 plt.savefig("rooms_data.png", dpi=110, bbox_inches="tight")

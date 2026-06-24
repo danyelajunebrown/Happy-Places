@@ -1,4 +1,4 @@
-# Tech Context: Belong OS
+# Tech Context
 
 ## Stack
 
@@ -35,7 +35,7 @@ pip install -r requirements.txt    # numpy, matplotlib
 ## Running
 
 ```bash
-./.venv/bin/python belong_os/ch03_adding_layers.py
+./.venv/bin/python happy_places/ch03_adding_layers.py
 ```
 
 Prints the data/layer shapes and the first few (meaningless, random-weight)
@@ -45,8 +45,8 @@ in `(rel_x, rel_y)` space.
 ## Repo layout
 
 ```
-Happy-Places/                    (GitHub repo name; local dir: Belongingness)
-├── belong_os/
+Happy-Places/                    (GitHub repo name; local dir: Happy Places)
+├── happy_places/
 │   └── ch03_adding_layers.py    # current chapter: forward pass through layers
 ├── memory-bank/                 # Cline-style persistent context (this dir)
 │   ├── projectbrief.md

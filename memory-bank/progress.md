@@ -1,4 +1,4 @@
-# Progress: Belong OS
+# Progress
 
 ## Status
 
@@ -23,9 +23,9 @@ learning yet. Next: Chapter 4 (activations).
 
 - [x] **Reboot decision.** Replace the old Happy Places (SQLite/CLI/NFC item
       tracker) with a from-scratch neural network. Old code kept in git history.
-- [x] **Repo reset.** `danyelajunebrown/Happy-Places` reset to host Belong OS;
-      local working dir is `…/Belongingness`.
-- [x] **Ch 3 script** (`belong_os/ch03_adding_layers.py`):
+- [x] **Repo reset.** `danyelajunebrown/Happy-Places` reset to host Happy Places;
+      local working dir is `…/Happy Places`.
+- [x] **Ch 3 script** (`happy_places/ch03_adding_layers.py`):
       - [x] `rooms_data()` — placeholder data shaped like real sensor readings
             (4 rooms in `(rel_x, rel_y)` space, `400 × 2`).
       - [x] `Layer_Dense` class (book-faithful).

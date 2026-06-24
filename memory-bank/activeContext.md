@@ -1,4 +1,4 @@
-# Active Context: Belong OS
+# Active Context
 
 > Read this first each session. It is the single most up-to-date snapshot of
 > where the project actually is.
@@ -9,7 +9,7 @@
 stacked dense layers on placeholder room data. This is the skeleton of the
 network; it does not learn yet.
 
-`belong_os/ch03_adding_layers.py`:
+`happy_places/ch03_adding_layers.py`:
 - `rooms_data()` makes `400 × 2` placeholder readings labeled into 4 rooms.
 - `Layer_Dense(2→8)` then `Layer_Dense(8→4)`: forward pass only.
 - Output is `400 × 4` room-scores from **random weights → meaningless so far**.
@@ -19,7 +19,7 @@ network; it does not learn yet.
 
 - **Reboot.** Happy Places was reset from a SQLite/CLI item-tracker to a
   from-scratch neural net. Old code is preserved in git history; the repo
-  (`danyelajunebrown/Happy-Places`) now hosts Belong OS.
+  (`danyelajunebrown/Happy-Places`) now hosts Happy Places.
 - Brought up Ch 3: dense layers + forward pass on our own sensor-shaped data
   instead of the book's `spiral_data`.
 - Set up venv + numpy/matplotlib; confirmed the script runs and plots.

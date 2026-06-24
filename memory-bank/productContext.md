@@ -1,10 +1,10 @@
-# Product Context: Belong OS
+# Product Context
 
 ## Why this exists
 
 Happy Places has always been about *belongingness* — the felt sense that a
 thing (or a person) is where it belongs. The earlier version approached this
-through manual item tracking. Belong OS approaches it through **inference**: let
+through manual item tracking. Happy Places approaches it through **inference**: let
 a neural network learn, from where things actually are, where they *belong*.
 
 The question the system answers: **"Given a reading, which place does this
@@ -26,7 +26,7 @@ learn the book on our own problem shape rather than its toy spirals.
 
 - **The maker (autoethnographic researcher).** Understanding both the math and
   their own spatial life. The point is to *build* the net, not just use one.
-- **Future inhabitants of a Belong OS space.** Rooms that know what belongs in
+- **Future inhabitants of a Happy Places space.** Rooms that know what belongs in
   them, surfaced gently rather than surveilled.
 
 ## Product principles

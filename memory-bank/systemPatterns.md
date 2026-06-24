@@ -1,4 +1,4 @@
-# System Patterns: Belong OS
+# System Patterns
 
 ## Architecture (current)
 
@@ -6,7 +6,7 @@ A single-file, top-to-bottom NNFS-style script. No package structure yet — tha
 arrives when there are enough layer types to justify it.
 
 ```
-belong_os/ch03_adding_layers.py
+happy_places/ch03_adding_layers.py
 ├── 0. Seed            np.random.seed(0)   # our stand-in for nnfs.init()
 ├── 1. Data            rooms_data()        # placeholder, sensor-shaped
 ├── 2. Layer           class Layer_Dense   # straight from NNFS Ch 3
